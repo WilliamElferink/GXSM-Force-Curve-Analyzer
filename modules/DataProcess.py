@@ -18,7 +18,8 @@ def DataProcess(PathToFile, PlotForceCurves, SaveForceCurves):
     row = []
     XRange = []
     ZMovement = []
-    DataSetVolt = []
+    DataSetConvert = []
+    VResponse = []
 
     ##############################################################
     #                       --- Part 1 ---                       #
@@ -26,7 +27,7 @@ def DataProcess(PathToFile, PlotForceCurves, SaveForceCurves):
     ##############################################################
 
     # Load datafiles (.txt) into Python
-    for i in range(0, 2):
+    for i in range(0, len(PathToFile)):
         with open(PathToFile[i]) as f:
             content = f.readlines()
         # Remove white spaces and find the start of the datafields
@@ -93,37 +94,46 @@ def DataProcess(PathToFile, PlotForceCurves, SaveForceCurves):
     #                 Convert data to correct units              #
     ##############################################################
     # Look up the voltage to movement response as known by GXSM (X, Y and Z)
+    # Also look up unit type and its conversion rate
     for x in File[0]:
         for y in x:
             if "opt_xpiezo_av =" in y:
                 PiezoXAv = float(
                     y.replace("opt_xpiezo_av = ", "").replace(";", ""))
-            elif "opt_ypiezo_av =" in y:
-                PiezoYAv = float(
-                    y.replace("opt_ypiezo_av = ", "").replace(";", ""))
             elif "opt_zpiezo_av =" in y:
                 PiezoZAv = float(
                     y.replace("opt_zpiezo_av = ", "").replace(";", ""))
-
-    # Convert the X-movement to Z-movement in Angstrom
-    for x in XRange:
-        ZMovement.append((x / PiezoXAv) * (PiezoZAv / 10))
-
-    # Convert deflection data from raw to voltages.
-    # Obtain conversion ratio
-    for x in File[0]:
+            elif "dz =" in y:
+                VResponse.append(float(
+                    y.replace("dz = ", "").replace(";", "")))
+                VResponse.append(VResponse[0])
+            elif "FloatField:unit = " in y:
+                UnitType = str(y.replace(
+                    "FloatField:unit = \"", "").replace("\" ;", ""))
+            elif "sranger_mk2_hwi_XSM_Inst_VZ = " in y:
+                GainZ = float(
+                    y.replace("sranger_mk2_hwi_XSM_Inst_VZ = ", "").replace(
+                        ";", ""))
+    for x in File[2]:
         for y in x:
             if "dz =" in y:
-                VResponse = float(y.replace("dz = ", "").replace(";", ""))
-    # Convert the dataset
+                VResponse.append(float(
+                    y.replace("dz = ", "").replace(";", "")))
+                VResponse.append(VResponse[2])
+
+    # Convert the X-movement to Z-movement in nanometers
+    for x in XRange:
+        ZMovement.append((x / PiezoXAv) * ((PiezoZAv * GainZ) / 10))
+
+    # Convert deflection data from raw to the requested unit.
     temp = []
-    for i in range(0, 2):
+    for i in range(0, len(PathToFile)):
         for x in DataSet[i]:
             for y in x:
-                temp.append(y * VResponse)
+                temp.append(y * VResponse[i])
             row.append(temp)
             temp = []
-        DataSetVolt.append(row)
+        DataSetConvert.append(row)
         row = []
 
     ##############################################################
@@ -136,18 +146,65 @@ def DataProcess(PathToFile, PlotForceCurves, SaveForceCurves):
     newdir = filename.replace(".txt", " Images/")
     if not os.path.exists(directory + '/' + newdir):
         os.makedirs(directory + '/' + newdir)
+    if UnitType == "Hz":
+        YAxisLabel = "Frequency shift (Hz)"
+    elif UnitType == "V":
+        YAxisLabel = "Voltage (V)"
 
     # Start plotting and saving of force curves
     if (PlotForceCurves == 1 or SaveForceCurves == 1):
         for i in range(0, DimY[0]):
-            fig = plt.figure(i)
-            plt.plot(ZMovement, DataSetVolt[0][
-                     i], 'b-', ZMovement, list(reversed(DataSetVolt[1][i])), 'r-')
-            plt.xlabel("Movement in Z-piezo (nm)")
-            plt.ylabel("Photodiode voltage/Force (V)")
-            plt.legend(["Approach force curve",
-                        "Retract force curve"], loc='best')
-            plt.title("Measurement #%i" % (i + 1))
+            if len(PathToFile) == 2:
+                fig = plt.figure(i)
+                plt.plot(
+                    ZMovement,
+                    DataSetConvert[0][i],
+                    'b-',
+                    ZMovement,
+                    list(reversed(DataSetConvert[1][i])),
+                    'r-')
+                plt.xlabel("Movement in Z-piezo (nm)")
+                plt.ylabel(YAxisLabel)
+                plt.legend(["Approach force curve",
+                            "Retract force curve"],
+                           loc='best')
+                plt.title("Measurement #%i" % (i + 1))
+                if SaveForceCurves == 1:
+                    plt.savefig(directory + '/' + newdir +
+                                'Measurement %i.png' % (i + 1))
+            if len(PathToFile) == 4:
+                fig = plt.figure(i)
+                ax1 = fig.add_subplot(111)
+                l1,=ax1.plot(
+                    ZMovement,
+                    DataSetConvert[0][i],
+                    'b-')
+                l2,=ax1.plot(
+                    ZMovement,
+                    list(reversed(DataSetConvert[1][i])),
+                    'r-')
+                ax1.set_xlabel("Movement in Z-piezo (nm)")
+                ax1.set_ylabel(YAxisLabel)
+                ax1.tick_params('y')
+                ax2 = ax1.twinx()
+                l3,=ax2.plot(
+                    ZMovement,
+                    DataSetConvert[2][i],
+                    'c-')
+                l4,=ax2.plot(
+                    ZMovement,
+                    list(reversed(DataSetConvert[3][i])),
+                    'g-')
+                ax2.set_ylabel("Tunnelling current (nA)")
+                ax2.tick_params('y')
+                plt.legend([l1, l2, l3, l4],["Approach force curve",
+                            "Retract force curve",
+                            "Approach tunnelling current",
+                            "Retract tunnelling current"],
+                           loc='best',
+                           prop={'size':8})
+                plt.title("Measurement #%i" % (i + 1))
+
             if SaveForceCurves == 1:
                 plt.savefig(directory + '/' + newdir +
                             'Measurement %i.png' % (i + 1))
@@ -155,6 +212,7 @@ def DataProcess(PathToFile, PlotForceCurves, SaveForceCurves):
             plt.show()
         if SaveForceCurves == 1:
             path = directory + '/' + newdir
+
             def open_file(path):
                 if platform.system() == "Windows":
                     os.startfile(path)

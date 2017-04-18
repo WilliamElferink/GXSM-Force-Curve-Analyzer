@@ -28,7 +28,8 @@
 import os
 import tkinter as tk
 from tkinter import *
-import modules.LoadData
+import modules.LoadForceData
+import modules.LoadForceCurrentData
 import modules.DataProcess
 
 # Define functions for the GUI menu.
@@ -43,36 +44,45 @@ def StartDataAnaysis():
         PathToFile, PlotForceCurves, SaveForceCurves)
 
 
-def SelectData():
+def SelectForceData():
     global PathToFile
-    PathToFile = modules.LoadData.LoadData()
+    PathToFile = modules.LoadForceData.LoadData()
+
+
+def SelectForceCurrentData():
+    global PathToFile
+    PathToFile = modules.LoadForceCurrentData.LoadData()
 
 # Define the function for a GUI window to set the preferred options
 
 
 def SummonGUI():
-    master = Tk()
-    master.title("Force Curve Analyzer")
+    root = Tk()
+    root.title("Force Curve Analyzer")
 
-    Label(master, text="Force Curve analyzer", font=(
+    Label(root, text="Force Curve analyzer", font=(
         "Helvetica", 16)).grid(row=0, sticky=W, columnspan=2)
-    Button(master, text='Load Data Files', command=SelectData).grid(
+    Button(root, text='Load Force Curve Files',
+           command=SelectForceData).grid(
         row=1, pady=4, columnspan=2)
-    Label(master, text="Please select your options:").grid(row=2, columnspan=2)
+    Button(root, text='Load Force Curve + Current Files',
+           command=SelectForceCurrentData).grid(
+        row=2, pady=4, columnspan=2)
+    Label(root, text="Please select your options:").grid(row=3, columnspan=2)
     global PFC
     PFC = IntVar()
-    Checkbutton(master, text="Show all forcecurves",
-                variable=PFC).grid(row=3, columnspan=2)
+    Checkbutton(root, text="Show all forcecurves",
+                variable=PFC).grid(row=4, columnspan=2)
     global SFC
     SFC = IntVar()
-    Checkbutton(master, text="Save all forcecurves",
-                variable=SFC).grid(row=4, columnspan=2)
-    Button(master, text='Execute', command=StartDataAnaysis).grid(
-        row=5, column=0, pady=4)
-    Button(master, text='Exit', command=master.destroy).grid(
-        row=5, column=1, pady=4)
-    master.attributes('-topmost', True)
-    master.lift()
+    Checkbutton(root, text="Save all forcecurves",
+                variable=SFC).grid(row=5, columnspan=2)
+    Button(root, text='Execute', command=StartDataAnaysis).grid(
+        row=7, column=0, pady=4)
+    Button(root, text='Exit', command=root.destroy).grid(
+        row=7, column=1, pady=4)
+    root.attributes('-topmost', True)
+    root.lift()
     mainloop()
 
 # Summon the GUI if this function is called specifically
