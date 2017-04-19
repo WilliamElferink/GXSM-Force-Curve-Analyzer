@@ -114,12 +114,13 @@ def DataProcess(PathToFile, PlotForceCurves, SaveForceCurves):
                 GainZ = float(
                     y.replace("sranger_mk2_hwi_XSM_Inst_VZ = ", "").replace(
                         ";", ""))
-    for x in File[2]:
-        for y in x:
-            if "dz =" in y:
-                VResponse.append(float(
-                    y.replace("dz = ", "").replace(";", "")))
-                VResponse.append(VResponse[2])
+    if (len(PathToFile) == 4):
+        for x in File[2]:
+            for y in x:
+                if "dz =" in y:
+                    VResponse.append(float(
+                        y.replace("dz = ", "").replace(";", "")))
+                    VResponse.append(VResponse[2])
 
     # Convert the X-movement to Z-movement in nanometers
     for x in XRange:
@@ -140,29 +141,38 @@ def DataProcess(PathToFile, PlotForceCurves, SaveForceCurves):
     #                       --- Part 3 ---                       #
     #                    Imaging the results                     #
     ##############################################################
-    # Creating a new folder for storing images.
-    directory = os.path.split(PathToFile[0])[0]
-    filename = os.path.split(PathToFile[0])[1]
-    newdir = filename.replace(".txt", " Images/")
-    if not os.path.exists(directory + '/' + newdir):
-        os.makedirs(directory + '/' + newdir)
     if UnitType == "Hz":
         YAxisLabel = "Frequency shift (Hz)"
     elif UnitType == "V":
         YAxisLabel = "Voltage (V)"
+    # Set preferred color codes here if you want different ones
+    # Ordered from line 1 to 4. Current settings are Tableau 20 colours
+    LineColor = [(31, 119, 180), (174, 199, 232),
+                 (255, 127, 14), (255, 187, 120)]
+
+    # Scale colours to the matplotlib format.
+    for i in range(len(LineColor)):
+        r, g, b = LineColor[i]
+        LineColor[i] = (r / 255., g / 255., b / 255.)
+
+    # Set linewidth for each line, ordered 1 to 4.
+    DataLineWidth = [2.0, 1.0, 2.0, 1.0]
 
     # Start plotting and saving of force curves
     if (PlotForceCurves == 1 or SaveForceCurves == 1):
         for i in range(0, DimY[0]):
             if len(PathToFile) == 2:
-                fig = plt.figure(i)
+                fig = plt.figure(i, figsize=(16, 12))
                 plt.plot(
                     ZMovement,
                     DataSetConvert[0][i],
-                    'b-',
+                    color=LineColor[0],
+                    linewidth=DataLineWidth[0])
+                plt.plot(
                     ZMovement,
                     list(reversed(DataSetConvert[1][i])),
-                    'r-')
+                    color=LineColor[1],
+                    linewidth=DataLineWidth[1])
                 plt.xlabel("Movement in Z-piezo (nm)")
                 plt.ylabel(YAxisLabel)
                 plt.legend(["Approach force curve",
@@ -170,42 +180,58 @@ def DataProcess(PathToFile, PlotForceCurves, SaveForceCurves):
                            loc='best')
                 plt.title("Measurement #%i" % (i + 1))
                 if SaveForceCurves == 1:
+                    # Creating a new folder for storing images.
+                    directory = os.path.split(PathToFile[0])[0]
+                    filename = os.path.split(PathToFile[0])[1]
+                    newdir = filename.replace(".txt", " Images/")
+                    if not os.path.exists(directory + '/' + newdir):
+                        os.makedirs(directory + '/' + newdir)
                     plt.savefig(directory + '/' + newdir +
                                 'Measurement %i.png' % (i + 1))
             if len(PathToFile) == 4:
-                fig = plt.figure(i)
+                fig = plt.figure(i, figsize=(16, 12))
                 ax1 = fig.add_subplot(111)
-                l1,=ax1.plot(
+                l1, = ax1.plot(
                     ZMovement,
                     DataSetConvert[0][i],
-                    'b-')
-                l2,=ax1.plot(
+                    color=LineColor[0],
+                    linewidth=DataLineWidth[0])
+                l2, = ax1.plot(
                     ZMovement,
                     list(reversed(DataSetConvert[1][i])),
-                    'r-')
+                    color=LineColor[1],
+                    linewidth=DataLineWidth[1])
                 ax1.set_xlabel("Movement in Z-piezo (nm)")
                 ax1.set_ylabel(YAxisLabel)
                 ax1.tick_params('y')
                 ax2 = ax1.twinx()
-                l3,=ax2.plot(
+                l3, = ax2.plot(
                     ZMovement,
                     DataSetConvert[2][i],
-                    'c-')
-                l4,=ax2.plot(
+                    color=LineColor[2],
+                    linewidth=DataLineWidth[2])
+                l4, = ax2.plot(
                     ZMovement,
                     list(reversed(DataSetConvert[3][i])),
-                    'g-')
+                    color=LineColor[3],
+                    linewidth=DataLineWidth[3])
                 ax2.set_ylabel("Tunnelling current (nA)")
                 ax2.tick_params('y')
-                plt.legend([l1, l2, l3, l4],["Approach force curve",
-                            "Retract force curve",
-                            "Approach tunnelling current",
-                            "Retract tunnelling current"],
+                plt.legend([l1, l2, l3, l4], ["Approach force curve",
+                                              "Retract force curve",
+                                              "Approach tunnelling current",
+                                              "Retract tunnelling current"],
                            loc='best',
-                           prop={'size':8})
+                           prop={'size': 12})
                 plt.title("Measurement #%i" % (i + 1))
 
             if SaveForceCurves == 1:
+                # Creating a new folder for storing images.
+                directory = os.path.split(PathToFile[0])[0]
+                filename = os.path.split(PathToFile[0])[1]
+                newdir = filename.replace(".txt", " Images/")
+                if not os.path.exists(directory + '/' + newdir):
+                    os.makedirs(directory + '/' + newdir)
                 plt.savefig(directory + '/' + newdir +
                             'Measurement %i.png' % (i + 1))
         if PlotForceCurves == 1:
